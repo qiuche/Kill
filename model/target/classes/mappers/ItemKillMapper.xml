@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.kill.model.mapper.ItemKillMapper" >
+    <resultMap id="BaseResultMap" type="com.kill.model.entity.ItemKill" >
+        <id column="id" property="id" jdbcType="INTEGER" />
+        <result column="item_id" property="itemId" jdbcType="INTEGER" />
+        <result column="total" property="total" jdbcType="INTEGER" />
+        <result column="start_time" property="startTime" jdbcType="TIMESTAMP" />
+        <result column="end_time" property="endTime" jdbcType="TIMESTAMP" />
+        <result column="is_active" property="isActive" jdbcType="TINYINT" />
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP" />
+    </resultMap>
+    <sql id="Base_Column_List" >
+    id, item_id, total, start_time, end_time, is_active, create_time
+    </sql>
+
+
+    <select id="selectAll" resultType="com.kill.model.entity.ItemKill">
+        SELECT
+              a.*,
+              b.name AS itemName,
+              (
+                CASE WHEN (now() BETWEEN a.start_time AND a.end_time AND a.total > 0)
+                  THEN 1
+                ELSE 0
+                END
+              )      AS canKill
+            FROM item_kill AS a LEFT JOIN item AS b ON b.id = a.item_id
+            WHERE a.is_active = 1
+    </select>
+
+    <select id="selectById" resultType="com.kill.model.entity.ItemKill">
+        SELECT
+              a.*,
+              b.name AS itemName,
+              (CASE WHEN (now() BETWEEN a.start_time AND a.end_time)
+                THEN 1
+               ELSE 0
+               END)  AS canKill
+            FROM item_kill AS a LEFT JOIN item AS b ON b.id = a.item_id
+            WHERE a.is_active = 1 AND a.id =#{id} AND a.total>0
+    </select>
+
+    <update id="updateKillItem">
+        UPDATE item_kill
+        SET total = total - 1
+        WHERE id = #{killId} AND total>0
+    </update>
+
+
+</mapper>
