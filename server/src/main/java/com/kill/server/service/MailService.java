@@ -8,6 +8,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
@@ -26,18 +27,15 @@ public class MailService {
     @Autowired
     private Environment env;
 
+    @Async
     public void sendHTMLMail(final MailDto mailDto) throws MessagingException {
         try {
             MimeMessage mimeMessage = MailSender.createMimeMessage();
             MimeMessageHelper messageHelper=new MimeMessageHelper(mimeMessage,true,"UTF-8");
             messageHelper.setFrom(env.getProperty("mail.send.from"));
-            log.info(env.getProperty("mail.send.from"));
             messageHelper.setTo(mailDto.getTos());
-            log.info(mailDto.getTos().toString());
             messageHelper.setSubject(mailDto.getSubject());
-            log.info(mailDto.getSubject().toString());
             messageHelper.setText(mailDto.getContent(),true);
-            log.info(mailDto.getContent().toString());
             MailSender.send(mimeMessage);
             log.info("发送邮件成功");
         }catch (Exception e){

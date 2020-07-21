@@ -1,5 +1,6 @@
 package com.kill.server.service;
 
+import com.kill.model.dto.KillDto;
 import com.kill.model.dto.KillSuccessUserInfo;
 import com.kill.model.mapper.ItemKillSuccessMapper;
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +55,56 @@ public class RabbitSenderService {
             }
         }catch (Exception e){
             log.error("秒杀成功异步发送邮箱通知信息-发生异常，消息为：{}",orderNo,e.fillInStackTrace());
+        }
+    }
+
+    public void sendKillSuccessOrderExpireMsg(final String orderCode){
+        try {
+            if (StringUtils.isNotBlank(orderCode)){
+                KillSuccessUserInfo info=itemKillSuccessMapper.selectByCode(orderCode);
+                if (info!=null){
+                    rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+                    rabbitTemplate.setExchange(env.getProperty("mq.kill.item.success.kill.dead.prod.exchange"));
+                    rabbitTemplate.setRoutingKey(env.getProperty("mq.kill.item.success.kill.dead.prod.routing.key"));
+                    rabbitTemplate.convertAndSend(info, new MessagePostProcessor() {
+                        @Override
+                        public Message postProcessMessage(Message message) throws AmqpException {
+                            MessageProperties mp=message.getMessageProperties();
+                            mp.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+                            mp.setHeader(AbstractJavaTypeMapper.DEFAULT_CONTENT_CLASSID_FIELD_NAME,KillSuccessUserInfo.class);
+
+                            //TODO：动态设置TTL
+                            mp.setExpiration(env.getProperty("mq.kill.item.success.kill.expire"));
+
+                            return message;
+                        }
+                    });
+                }
+            }
+        }catch (Exception e){
+            log.error("秒杀成功后生成抢购订单-发送信息入死信队列，等待着一定时间失效超时未支付的订单-发生异常，消息为：{}",orderCode,e.fillInStackTrace());
+        }
+    }
+
+    public void sendKillExecuteMqMsg(final KillDto killDto){
+        try {
+            if(killDto!=null){
+                rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+                rabbitTemplate.setExchange(env.getProperty("mq.kill.item.execute.limit.queue.exchange"));
+                rabbitTemplate.setRoutingKey(env.getProperty("mq.kill.item.execute.limit.queue.routing.key"));
+                rabbitTemplate.convertAndSend(killDto, new MessagePostProcessor() {
+                    @Override
+                    public Message postProcessMessage(Message message) throws AmqpException {
+                        MessageProperties mp=message.getMessageProperties();
+                        mp.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
+                        mp.setHeader(AbstractJavaTypeMapper.DEFAULT_KEY_CLASSID_FIELD_NAME,KillDto.class);
+                        return message;
+                    }
+                });
+            }
+
+        }catch (Exception e){
+            log.error("秒杀异步发送Mq消息-发生异常。消息为：{}",killDto,e.fillInStackTrace());
         }
     }
 }

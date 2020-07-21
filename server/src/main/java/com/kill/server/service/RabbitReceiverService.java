@@ -1,8 +1,11 @@
 package com.kill.server.service;
 
+import com.kill.model.dto.KillDto;
 import com.kill.model.dto.KillSuccessUserInfo;
 import com.kill.model.dto.MailDto;
+import com.kill.model.entity.ItemKillSuccess;
 import com.kill.model.mapper.ItemKillSuccessMapper;
+import com.kill.server.service.impl.KillService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -36,10 +39,35 @@ public class RabbitReceiverService {
         }
     }
 
+    @RabbitListener(queues = {"${mq.kill.item.success.kill.dead.real.queue}"},containerFactory = "singleListenerContainer")
+    public void consumeExpireOrder(KillSuccessUserInfo info){
+        try {
+            log.info("用户秒杀成功后超时未支付-监听者-接收消息:{}",info);
+            if(info!=null){
+                ItemKillSuccess entity=itemKillSuccessMapper.selectByPrimaryKey(info.getCode());
+                if(entity!=null&&entity.getStatus().intValue()==0){
+                    itemKillSuccessMapper.expireOrder(info.getCode());
+                }
+            }
+        }catch (Exception e){
+            log.error("用户秒杀成功后超时未支付-监听者-发生异常：",e.fillInStackTrace());
+        }
+    }
 
+    @Autowired
+    private KillService killService;
+
+    @RabbitListener(queues = {"${mq.kill.item.execute.limit.queue.name}"},containerFactory = "multiListenerContainer")
+    public void consumeKillExecuteMqMsg(KillDto dto){
+        try {
+            if(dto!=null){
+                killService.KillItem(dto.getKillId(),dto.getUserId());
+            }
+        } catch (Exception e) {
+            log.error("用户秒杀成功后超时未支付-监听者-发生异常：",e.fillInStackTrace());
+        }
+    }
 }
-
-
 
 
 

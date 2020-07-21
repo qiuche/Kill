@@ -1,6 +1,7 @@
 package com.kill.server.config;
 
 
+import net.sf.jsqlparser.statement.select.Top;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.*;
@@ -14,6 +15,9 @@ import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainer
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.testng.collections.Maps;
+
+import java.util.Map;
 
 @Configuration
 public class RabbitmqConfig {
@@ -88,5 +92,57 @@ public class RabbitmqConfig {
     public Binding successEmailBinding(){
         return BindingBuilder.bind(successEmailQueue()).to(successEmailExchange()).with(env.getProperty("mq.kill.item.success.email.routing.key"));
     }
+
+    //死信队列-超时未支付
+    @Bean
+    public Queue successKillDeadQueue(){
+        Map<String,Object> argsMap= Maps.newHashMap();
+        argsMap.put("x-dead-letter-exchange",env.getProperty("mq.kill.item.success.kill.dead.exchange"));
+        argsMap.put("x-dead-letter-routing-key",env.getProperty("mq.kill.item.success.kill.dead.routing.key"));
+        return new Queue(env.getProperty("mq.kill.item.success.kill.dead.queue"),true,false,false,argsMap);
+    }
+
+    @Bean
+    public TopicExchange successKillDeadProdExchange(){
+        return new TopicExchange(env.getProperty("mq.kill.item.success.kill.dead.prod.exchange"),true,false);
+    }
+
+    @Bean
+    public Binding successKillDeadProBinding(){
+        return BindingBuilder.bind(successKillDeadQueue()).to(successKillDeadProdExchange()).with(env.getProperty("mq.kill.item.success.kill.dead.prod.routing.key"));
+    }
+
+    @Bean
+    public Queue successKillRealQueue(){
+        return new Queue(env.getProperty("mq.kill.item.success.kill.dead.real.queue"),true);
+    }
+
+    @Bean
+    public TopicExchange successKillDeadExchange(){
+        return new TopicExchange(env.getProperty("mq.kill.item.success.kill.dead.exchange"),true,false);
+    }
+
+    @Bean
+    public Binding successKillDeadBinding(){
+        return BindingBuilder.bind(successKillRealQueue()).to(successKillDeadExchange()).with(env.getProperty("mq.kill.item.success.kill.dead.routing.key"));
+    }
+
+    @Bean
+    public Queue executeLimitQueue(){
+        Map<String,Object> argsMap=Maps.newHashMap();
+        argsMap.put("x-max-length",env.getProperty("spring.rabbitmq.listener.simple.prefetch",Integer.class));
+        return new Queue(env.getProperty("mq.kill.item.execute.limit.queue.name"),true,false,false,argsMap);
+    }
+
+    @Bean
+    public TopicExchange executeLimitExchange(){
+        return new TopicExchange(env.getProperty("mq.kill.item.execute.limit.queue.exchange"),true,false);
+    }
+
+    @Bean
+    public Binding executeLimitBinding(){
+        return BindingBuilder.bind(executeLimitQueue()).to(executeLimitExchange()).with(env.getProperty("mq.kill.item.execute.limit.queue.routing.key"));
+    }
+
 
 }

@@ -44,8 +44,11 @@
             type: "GET",
             url: "${ctx}/kill/execute/mq/result?killId="+killId+"&userId="+userId,
             success: function(res){
+                console.log(11)
                 if (res.code==0) {
                     $("#executeResult").html(res.data.executeResult);
+                    console.log(res.data.executeResult);
+                    console.log(222)
                     $("#waitResult").html("");
                 }else{
                     $("#executeResult").html(res.msg);
