@@ -20,7 +20,7 @@ public class ItemService implements IItemService {
     private ItemKillMapper itemKillMapper;
 
     @Override
-    @Cacheable(cacheNames = "AllKillItems",key="'AllKillItems'")
+//    @Cacheable(cacheNames = "AllKillItems",key="'AllKillItems'")
     public List<ItemKill> getKillItems() throws Exception {
         return itemKillMapper.selectAll();
     }

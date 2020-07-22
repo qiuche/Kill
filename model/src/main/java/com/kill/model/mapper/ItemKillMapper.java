@@ -12,4 +12,5 @@ public interface ItemKillMapper {
 
     int updateKillItem(@Param("killId") Integer killId);
 
+    int addKillItemTotal(@Param("killId") Integer killId);
 }

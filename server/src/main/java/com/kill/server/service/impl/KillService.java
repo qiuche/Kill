@@ -10,16 +10,22 @@ import com.kill.model.mapper.ItemKillSuccessMapper;
 import com.kill.server.service.IKillService;
 import com.kill.server.service.RabbitSenderService;
 import com.kill.server.utils.SnowFlake;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.joda.time.DateTime;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class KillService implements IKillService {
@@ -36,24 +42,54 @@ public class KillService implements IKillService {
     @Autowired
     private RabbitSenderService rabbitSenderService;
 
+    @Autowired
+    private RedissonClient redissonClient;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private CuratorFramework curatorFramework;
+
+    private static final String pathPrefix="/kill/zkLock/";
+
+    /**
+     * 商品秒杀核心业务逻辑的处理-基于ZooKeeper的分布式锁
+     * @param killId
+     * @param userId
+     * @return
+     * @throws Exception
+     */
     @Override
     public Boolean KillItem(Integer killId, Integer userId) throws Exception {
-        Boolean result = false;
-        if (itemKillSuccessMapper.countByKillUserId(killId, userId) <= 0) {
-            ItemKill itemKill = itemKillMapper.selectById(killId);
-            if (itemKill != null && 1 == itemKill.getCanKill() && itemKill.getTotal() > 0) {
-
-                int i = itemKillMapper.updateKillItem(killId);
-                if (i > 0) {
-                    commonRecordKillSuccessInfo(itemKill, userId);
-                    result = true;
+        Boolean result=false;
+        InterProcessMutex mutex=new InterProcessMutex(curatorFramework,pathPrefix+killId+userId+"-locks");
+        try {
+            if (mutex.acquire(10L,TimeUnit.SECONDS)){
+                //TODO:核心业务逻辑
+                if (itemKillSuccessMapper.countByKillUserId(killId,userId) <= 0){
+                    ItemKill itemKill=itemKillMapper.selectById(killId);
+                    if (itemKill!=null && 1==itemKill.getCanKill() && itemKill.getTotal()>0){
+                        int res=itemKillMapper.updateKillItem(killId);
+                        if (res>0){
+                            commonRecordKillSuccessInfo(itemKill,userId);
+                            result=true;
+                        }
+                    }
+                }else{
+                    log.error("zookeeper-您已经抢购过该商品了!");
                 }
             }
-        } else {
-            throw new Exception("您已经抢购过该商品！");
+        }catch (Exception e){
+            log.error("还没到抢购日期、已过了抢购时间或已被抢购完毕！");
+        }finally {
+            if (mutex!=null){
+                mutex.release();
+            }
         }
         return result;
     }
+
 
     private void commonRecordKillSuccessInfo(ItemKill kill, Integer userId) throws Exception {
         ItemKillSuccess itemKillSuccess = new ItemKillSuccess();
@@ -64,10 +100,7 @@ public class KillService implements IKillService {
         itemKillSuccess.setUserId(userId.toString());
         itemKillSuccess.setStatus(SysConstant.OrderStatus.SuccessNotPayed.getCode().byteValue());
         itemKillSuccess.setCreateTime(DateTime.now().toDate());
-
-        log.info("创建时间:"+DateTime.now().toDate());
         if (itemKillSuccessMapper.countByKillUserId(kill.getId(), userId) <= 0) {
-            System.out.println(itemKillSuccess.getCreateTime());
             int i = itemKillSuccessMapper.insertSelective(itemKillSuccess);
             if (i > 0) {
                 log.info("发邮件");

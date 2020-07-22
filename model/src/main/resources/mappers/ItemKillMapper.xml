@@ -47,5 +47,11 @@
         WHERE id = #{killId} AND total>0
     </update>
 
+    <update id="addKillItemTotal">
+        UPDATE item_kill
+        SET total = total + 1
+        WHERE id = #{killId}
+    </update>
+
 
 </mapper>

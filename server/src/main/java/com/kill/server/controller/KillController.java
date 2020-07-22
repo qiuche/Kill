@@ -39,18 +39,13 @@ public class KillController {
 
     @RequestMapping(value = prefix+"/execute",method = RequestMethod.POST,consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
     @ResponseBody
-    public BaseResponse execute(@RequestBody @Validated KillDto killDto, BindingResult result, HttpSession session){
+    public BaseResponse execute(@RequestBody @Validated KillDto killDto, BindingResult result){
         if(result.hasErrors()||killDto.getKillId()<=0){
             return new BaseResponse(StatusCode.InvalidParams);
         }
-        Object uid=session.getAttribute("uid");
-        if(uid==null){
-            return new BaseResponse(StatusCode.UserNotLogin);
-        }
-        Integer userId=killDto.getUserId();
         BaseResponse response=new BaseResponse(StatusCode.Success);
         try {
-            Boolean aBoolean = killService.KillItem(killDto.getKillId(), userId);
+            Boolean aBoolean = killService.KillItem(killDto.getKillId(), killDto.getUserId());
             if(!aBoolean){
                 return new BaseResponse(StatusCode.Fail.getCode(),"商品抢购完毕");
             }
@@ -115,6 +110,26 @@ public class KillController {
         return response;
     }
 
+    @RequestMapping(value = prefix+"/execute/mq/Jm",method = RequestMethod.POST,consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    @ResponseBody
+    public BaseResponse executemqJm(@RequestBody @Validated KillDto dto, BindingResult result) {
+        if (result.hasErrors()||dto.getKillId()<=0){
+            return new BaseResponse(StatusCode.InvalidParams);
+        }
+
+        BaseResponse response=new BaseResponse(StatusCode.Success);
+        Map<String,Object> dataMap= Maps.newHashMap();
+        try {
+            dataMap.put("killId",dto.getKillId());
+            dataMap.put("userId",dto.getUserId());
+            response.setData(dataMap);
+            rabbitSenderService.sendKillExecuteMqMsg(dto);
+        }catch (Exception e){
+            response=new BaseResponse(StatusCode.Fail.getCode(),e.getMessage());
+        }
+        return response;
+    }
+
     @RequestMapping(value = prefix+"/execute/mq/to/result",method = RequestMethod.GET)
     public String executeToResult(@RequestParam Integer killId,HttpSession session,ModelMap modelMap){
         Object uId=session.getAttribute("uid");
@@ -138,5 +153,7 @@ public class KillController {
         }
         return response;
     }
+
+
 
 }
