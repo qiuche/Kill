@@ -14,7 +14,7 @@
         <mybatis-pagehelper.version>4.1.2</mybatis-pagehelper.version>
         <lombok.version>1.16.10</lombok.version>
         <javax-validation.version>1.1.0.Final</javax-validation.version>
-        <hibernate-validator.version>5.3.5.Final</hibernate-validator.version>
+        <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
     </properties>
 
     <dependencies>
