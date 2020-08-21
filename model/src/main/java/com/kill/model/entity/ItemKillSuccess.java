@@ -20,6 +20,7 @@ public class ItemKillSuccess implements Serializable {
 
     private Byte status;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss",timezone = "GMT+8")
     private Date createTime;
 
     private Integer diffTime;

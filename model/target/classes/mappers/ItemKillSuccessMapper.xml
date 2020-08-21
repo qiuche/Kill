@@ -126,6 +126,15 @@
             a.`status` = 0
     </select>
 
+    <select id="selectKidUid" resultType="com.kill.model.dto.KillDto">
+        SELECT
+            a.kill_id,a.user_id
+        FROM
+            item_kill_success AS a
+        WHERE
+            a.`status` = 0
+    </select>
+
     <select id="selectByKillIdUserId" resultType="com.kill.model.dto.KillSuccessUserInfo">
         SELECT
         a.*,

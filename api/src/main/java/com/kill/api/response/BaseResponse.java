@@ -1,7 +1,9 @@
 package com.kill.api.response;
 
 import com.kill.api.enums.StatusCode;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor
 public class BaseResponse<T> {
 
     private Integer code;

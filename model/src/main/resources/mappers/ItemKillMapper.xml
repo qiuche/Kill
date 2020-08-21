@@ -29,6 +29,27 @@
             WHERE a.is_active = 1
     </select>
 
+    <select id="selectAllKillId" resultType="java.lang.String">
+        SELECT
+              a.id
+            FROM item_kill AS a
+            WHERE a.is_active = 1 AND (now() BETWEEN a.start_time AND a.end_time) AND a.total > 0
+    </select>
+
+    <select id="selectCanKillItem" resultType="com.kill.model.entity.ItemKill">
+        SELECT
+              a.*,
+              b.name AS itemName,
+              (
+                CASE WHEN (now() BETWEEN a.start_time AND a.end_time AND a.total > 0)
+                  THEN 1
+                ELSE 0
+                END
+              )      AS canKill
+            FROM item_kill AS a LEFT JOIN item AS b ON b.id = a.item_id
+            WHERE a.is_active = 1
+    </select>
+
     <select id="selectById" resultType="com.kill.model.entity.ItemKill">
         SELECT
               a.*,

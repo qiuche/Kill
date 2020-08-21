@@ -12,7 +12,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 
 @Service
 public class RabbitReceiverService {
@@ -27,6 +30,9 @@ public class RabbitReceiverService {
 
     @Autowired
     private Environment env;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     @RabbitListener(queues = {"${mq.kill.item.success.email.queue}"}, containerFactory = "singleListenerContainer")
     public void consumeEmailMsg(KillSuccessUserInfo info) {
@@ -43,33 +49,35 @@ public class RabbitReceiverService {
     @Autowired
     private ItemKillMapper itemKillMapper;
 
-    @RabbitListener(queues = {"${mq.kill.item.success.kill.dead.real.queue}"},containerFactory = "singleListenerContainer")
-    public void consumeExpireOrder(KillSuccessUserInfo info){
+
+    @RabbitListener(queues = {"${mq.kill.item.success.kill.dead.real.queue}"}, containerFactory = "singleListenerContainer")
+    public void consumeExpireOrder(KillSuccessUserInfo info) {
         try {
-            log.info("用户秒杀成功后超时未支付-监听者-接收消息:{}",info);
-            if(info!=null){
-                ItemKillSuccess entity=itemKillSuccessMapper.selectByPrimaryKey(info.getCode());
-                if(entity!=null&&entity.getStatus().intValue()==0){
+            log.info("用户秒杀成功后超时未支付-监听者-接收消息:{}", info);
+            if (info != null) {
+                ItemKillSuccess entity = itemKillSuccessMapper.selectByPrimaryKey(info.getCode());
+                if (entity != null && entity.getStatus().intValue() == 0) {
                     itemKillSuccessMapper.expireOrder(info.getCode());
                     itemKillMapper.addKillItemTotal(info.getKillId());
+                    stringRedisTemplate.delete(env.getProperty("redis.item.kill.Killedkey") + info.getKillId() + info.getUserId());
                 }
             }
-        }catch (Exception e){
-            log.error("用户秒杀成功后超时未支付-监听者-发生异常：",e.fillInStackTrace());
+        } catch (Exception e) {
+            log.error("用户秒杀成功后超时未支付-监听者-发生异常：", e.fillInStackTrace());
         }
     }
 
     @Autowired
-    private KillService killService;
+    private IKillService killService;
 
-    @RabbitListener(queues = {"${mq.kill.item.execute.limit.queue.name}"},containerFactory = "multiListenerContainer")
-    public void consumeKillExecuteMqMsg(KillDto dto){
+    @RabbitListener(queues = {"${mq.kill.item.execute.limit.queue.name}"}, containerFactory = "multiListenerContainer")
+    public void consumeKillExecuteMqMsg(KillDto dto) throws Exception {
         try {
-            if(dto!=null){
-                killService.KillItem(dto.getKillId(),dto.getUserId());
+            if (dto != null) {
+                killService.KillItem(dto.getKillId(), dto.getUserId());
             }
         } catch (Exception e) {
-            log.error("用户秒杀成功后超时未支付-监听者-发生异常：",e.fillInStackTrace());
+            stringRedisTemplate.opsForValue().increment(env.getProperty("redis.item.kill.Itemkey") + dto.getKillId());
         }
     }
 }

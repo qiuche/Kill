@@ -1,5 +1,6 @@
 package com.kill.model.mapper;
 
+import com.kill.model.dto.KillDto;
 import com.kill.model.dto.KillSuccessUserInfo;
 import com.kill.model.entity.ItemKillSuccess;
 import org.apache.ibatis.annotations.Param;
@@ -22,6 +23,8 @@ public interface ItemKillSuccessMapper {
     int expireOrder(@Param("code") String code);
 
     List<ItemKillSuccess> selectExpireOrders();
+
+    List<KillDto> selectKidUid();
 
     KillSuccessUserInfo selectByKillIdUserId(@Param("killId") Integer killId, @Param("userId") Integer userId);
 }
