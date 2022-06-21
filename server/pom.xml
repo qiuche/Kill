@@ -18,7 +18,7 @@
         <spring-session.version>1.2.0.RELEASE</spring-session.version>
         <slf4j.version>1.7.13</slf4j.version>
         <log4j.version>1.2.17</log4j.version>
-        <mysql.version>8.0.12</mysql.version>
+        <mysql.version>8.0.28</mysql.version>
         <druid.version>1.1.10</druid.version>
         <guava.version>23.0</guava.version>
         <joda-time.version>2.9.2</joda-time.version>
